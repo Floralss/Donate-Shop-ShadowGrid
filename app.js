@@ -2,7 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// Твой проверенный конфиг Firebase
+// === Конфигурация Firebase ===
 const firebaseConfig = {
   apiKey: "AIzaSyCDdPwaB8mH9TsM5hyXFbF0fNpFaWXjmV0",
   authDomain: "novus-roleplay.firebaseapp.com",
@@ -13,19 +13,20 @@ const firebaseConfig = {
   measurementId: "G-V0LK42BXRT"
 };
 
-// Инициализация сервисов с проверкой связи
+// Инициализация сервисов
 let app, auth, db;
 try {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
 } catch (configError) {
-    alert("Критическая ошибка конфигурации Firebase! Проверь интернеты или ключи доступа: " + configError.message);
+    alert("Критическая ошибка конфигурации Firebase! Проверь подключение к сети или ключи: " + configError.message);
 }
 
 let userData = null;
 let activeCategoryId = null;
 
+// === Поиск HTML Элементов ===
 const sections = {
     main: document.getElementById('main-section'),
     forum: document.getElementById('forum-section'),
@@ -41,11 +42,10 @@ const navLinks = {
 
 const btnLogout = document.getElementById('btn-logout');
 
-// Улучшенная система уведомлений (Тосты)
+// === Система Уведомлений (Тосты) ===
 function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) {
-        // Если контейнер еще не прогрузился, используем обычный алерт, чтоб не терять инфу
         alert(`${type.toUpperCase()}: ${message}`);
         return;
     }
@@ -62,6 +62,7 @@ function showToast(message, type = 'success') {
     }, 5000);
 }
 
+// === Маршрутизация (Переключение экранов) ===
 function routeTo(targetSection) {
     Object.keys(sections).forEach(key => {
         if(sections[key]) sections[key].classList.add('hidden');
@@ -79,12 +80,12 @@ function routeTo(targetSection) {
     if (navLinks[targetSection]) navLinks[targetSection].classList.add('active');
 }
 
-// Навигация
+// Слушатели бокового меню
 if(navLinks.main) navLinks.main.addEventListener('click', () => routeTo('main'));
 if(navLinks.forum) navLinks.forum.addEventListener('click', () => { routeTo('forum'); renderCategories(); });
 if(navLinks.admin) navLinks.admin.addEventListener('click', () => { routeTo('admin'); renderAdminDashboard(); });
 
-// Переключение табов Вход / Регистрация
+// Переключение вкладок Вход / Регистрация в форме
 const tabLogin = document.getElementById('tab-login');
 const tabRegister = document.getElementById('tab-register');
 if(tabLogin && tabRegister) {
@@ -103,7 +104,7 @@ if(tabLogin && tabRegister) {
     });
 }
 
-// РЕГИСТРАЦИЯ С РАСШИФРОВКОЙ ОШИБОК
+// === РЕГИСТРАЦИЯ АККАУНТА ===
 document.getElementById('register-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = document.getElementById('reg-username').value.trim();
@@ -117,11 +118,11 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     }
 
     try {
-        // Шаг 1: Создание учетки в Authentication
+        // Создание в Authentication
         const credentials = await createUserWithEmailAndPassword(auth, email, password);
         const user = credentials.user;
 
-        // Шаг 2: Запись профиля в базу данных Firestore
+        // Создание карточки профиля в Firestore
         try {
             await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
@@ -134,7 +135,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
             setTimeout(() => location.reload(), 1000);
         } catch (firestoreError) {
             console.error(firestoreError);
-            showToast("Аккаунт создан в Auth, но БД Firestore заблокировала запись профиля! Проверь вкладку Rules (Правила) в Firestore.", "error");
+            showToast("Аккаунт создан в Auth, но БД Firestore заблокировала запись профиля! Проверь Rules (Правила) в Firestore.", "error");
         }
 
     } catch (err) {
@@ -153,7 +154,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     }
 });
 
-// ВХОД В СИСТЕМУ С РАСШИФРОВКОЙ ОШИБОК
+// === ВХОД В СИСТЕМУ ===
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('login-email').value.trim();
@@ -172,7 +173,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     }
 });
 
-// РАЗЛОГИН
+// === ВЫХОД ИЗ СИСТЕМЫ ===
 if(btnLogout) {
     btnLogout.addEventListener('click', () => {
         signOut(auth).then(() => {
@@ -182,39 +183,64 @@ if(btnLogout) {
     });
 }
 
-// НАБЛЮДАТЕЛЬ ЗА СТАТУСОМ
+// === НАБЛЮДАТЕЛЬ ЗА СТАТУСОМ АВТОРИЗАЦИИ (ФИКС ЗАВИСАНИЯ) ===
 if(auth) {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             try {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
+                
                 if (userDoc.exists()) {
                     userData = userDoc.data();
-                    
-                    document.getElementById('profile-name').innerText = userData.username;
-                    document.getElementById('user-avatar').src = userData.avatar;
-                    
-                    const badge = document.getElementById('profile-badge');
-                    badge.innerText = userData.role;
-                    if (userData.role === "Администратор") {
-                        badge.className = "badge badge-admin";
-                        if(navLinks.admin) navLinks.admin.classList.remove('hidden');
-                        document.getElementById('admin-category-zone').classList.remove('hidden');
-                        document.getElementById('player-thread-trigger').classList.add('hidden');
-                    } else {
-                        badge.className = "badge badge-player";
-                        if(navLinks.admin) navLinks.admin.classList.add('hidden');
-                        document.getElementById('admin-category-zone').classList.add('hidden');
-                        document.getElementById('player-thread-trigger').classList.remove('hidden');
-                    }
-
-                    if(btnLogout) btnLogout.classList.remove('hidden');
-                    routeTo('main');
                 } else {
-                    showToast("Профиль авторизован, но данные игрока в Firestore не найдены.", "info");
+                    // Фолбек, если запись в бд отсутствует, чтобы сайт не зависал
+                    userData = {
+                        uid: user.uid,
+                        username: user.email.split('@')[0], 
+                        role: "Игрок",
+                        avatar: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150"
+                    };
+                    showToast("Вход выполнен! (Профиль в БД отсутствовал, применён авто-созданный)", "info");
                 }
+                
+                // Рендер данных в UI
+                const profileNameEl = document.getElementById('profile-name');
+                const userAvatarEl = document.getElementById('user-avatar');
+                const badgeEl = document.getElementById('profile-badge');
+
+                if(profileNameEl) profileNameEl.innerText = userData.username;
+                if(userAvatarEl) userAvatarEl.src = userData.avatar;
+                
+                if (badgeEl) {
+                    badgeEl.innerText = userData.role;
+                    if (userData.role === "Администратор") {
+                        badgeEl.className = "badge badge-admin";
+                        if(navLinks.admin) navLinks.admin.classList.remove('hidden');
+                        
+                        const acz = document.getElementById('admin-category-zone');
+                        const ptt = document.getElementById('player-thread-trigger');
+                        if(acz) acz.classList.remove('hidden');
+                        if(ptt) ptt.classList.add('hidden');
+                    } else {
+                        badgeEl.className = "badge badge-player";
+                        if(navLinks.admin) navLinks.admin.classList.add('hidden');
+                        
+                        const acz = document.getElementById('admin-category-zone');
+                        const ptt = document.getElementById('player-thread-trigger');
+                        if(acz) acz.classList.add('hidden');
+                        if(ptt) ptt.classList.remove('hidden');
+                    }
+                }
+
+                if(btnLogout) btnLogout.classList.remove('hidden');
+                
+                // Перенаправление на главную (Убирает зависание)
+                routeTo('main');
+
             } catch(e) {
-                showToast("Ошибка чтения профиля из Firestore: " + e.message, "error");
+                console.error("Ошибка UI:", e);
+                showToast("Ошибка интерфейса, пробиваемся принудительно...", "error");
+                routeTo('main'); 
             }
         } else {
             if(btnLogout) btnLogout.classList.add('hidden');
@@ -224,7 +250,7 @@ if(auth) {
     });
 }
 
-// СМЕНА АВАТАРА
+// === СМЕНА АВАТАРА ===
 const avatarInput = document.getElementById('avatar-input');
 if(avatarInput) {
     avatarInput.addEventListener('change', function() {
@@ -387,7 +413,7 @@ async function renderThreads(catId) {
     }
 }
 
-// ================= АДМИНКА =================
+// ================= ПАНЕЛЬ АДМИНИСТРАТОРА =================
 async function renderAdminDashboard() {
     if(!userData || userData.role !== "Администратор") return;
     const tableBody = document.getElementById('admin-users-table');
@@ -425,6 +451,7 @@ async function renderAdminDashboard() {
     }
 }
 
+// Скачивание
 const linkDownload = document.getElementById('link-download');
 if(linkDownload) {
     linkDownload.addEventListener('click', () => {
