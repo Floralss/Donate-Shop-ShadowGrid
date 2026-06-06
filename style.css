@@ -1,0 +1,36 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Регистрация</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="logo">NOVUS ROLEPLAY</div>
+
+    <div class="nav-links">
+        <a href="index.html">Главная</a>
+        <a href="forum.html">Форум</a>
+        <a href="launcher.html">Лаунчер</a>
+        <a href="login.html">Вход</a>
+    </div>
+</nav>
+
+<div class="hero">
+    
+        <div class="card">
+            <h2>Регистрация</h2>
+            <input type="text" placeholder="Ник">
+            <input type="email" placeholder="Email">
+            <input type="password" placeholder="Пароль">
+            <button class="btn">Создать аккаунт</button>
+        </div>
+        
+</div>
+
+</body>
+</html>
