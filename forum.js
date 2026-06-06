@@ -1,36 +1,18 @@
-body{
-background:#111;
-color:white;
-font-family:Arial;
-text-align:center;
-margin:0;
-padding:0;
-}
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-.container{
-margin-top:100px;
-}
+const firebaseConfig = {
+  apiKey: "AIzaSyCDdPwaB8mH9TsM5hyXFbF0fNpFaWXjmV0",
+  authDomain: "novus-roleplay.firebaseapp.com",
+  projectId: "novus-roleplay",
+  storageBucket: "novus-roleplay.firebasestorage.app",
+  messagingSenderId: "207082104048",
+  appId: "1:207082104048:web:bbf438aba78c9a7e79ce35",
+  measurementId: "G-V0LK42BXRT"
+};
 
-.btn, button{
-background:red;
-padding:15px 25px;
-border:none;
-color:white;
-cursor:pointer;
-margin:10px;
-text-decoration:none;
-display:inline-block;
-border-radius:10px;
-}
+const app = initializeApp(firebaseConfig);
 
-input, textarea{
-width:300px;
-padding:10px;
-margin:10px;
-border-radius:10px;
-border:none;
-}
-
-textarea{
-height:120px;
-}
+export const auth = getAuth(app);
+export const db = getFirestore(app);
