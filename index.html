@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novus RolePlay | Official Hub</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts for ultra-modern look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Уведомления (Трей / Тосты) -->
+    <div id="toast-container"></div>
+
+    <!-- Модальное окно создания темы -->
+    <div id="modal-overlay" class="hidden">
+        <div class="modal card animate-slide-up">
+            <div class="modal-header">
+                <h3 id="modal-title">Создание новой жалобы / обращения</h3>
+                <button id="btn-close-modal" class="btn-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label for="thread-title">Суть обращения (Краткий заголовок)</label>
+                    <input type="text" id="thread-title" placeholder="Например: Жалоба на игрока #1234 / НонРП">
+                </div>
+                <div class="input-group">
+                    <label for="thread-text">Подробное описание проблемы</label>
+                    <textarea id="thread-text" rows="5" placeholder="Опишите ситуацию максимально подробно, укажите время и участников..."></textarea>
+                </div>
+                <button id="btn-submit-thread" class="btn-primary w-100">Опубликовать в раздел</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Навигационная панель -->
+    <header class="navbar">
+        <div class="navbar-brand">
+            <span class="logo-accent">NOVUS</span><span class="logo-main">RP</span>
+        </div>
+        <nav class="navbar-links">
+            <a href="#" id="nav-main" class="nav-link active">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                Главная
+            </a>
+            <a href="#" id="nav-forum" class="nav-link">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Форум
+            </a>
+            <a href="#" id="nav-admin" class="nav-link admin-glow hidden">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Управление
+            </a>
+        </nav>
+        <div class="navbar-user">
+            <button id="btn-logout" class="btn-secondary hidden">
+                Выйти
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="main-content">
+        
+        <!-- ================= ОКНО АВТОРИЗАЦИИ / РЕГИСТРАЦИИ ================= -->
+        <section id="auth-section" class="auth-container animate-fade-in">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h2>Добро пожаловать в систему</h2>
+                    <p>Авторизуйтесь для доступа к лаунчеру и форуму проекта</p>
+                </div>
+                
+                <div class="auth-tabs">
+                    <button id="tab-login" class="auth-tab active">Вход</button>
+                    <button id="tab-register" class="auth-tab">Регистрация</button>
+                </div>
+
+                <!-- Форма Входа -->
+                <form id="login-form" class="auth-form">
+                    <div class="input-group">
+                        <label>Ваш Email</label>
+                        <input type="email" id="login-email" placeholder="example@mail.com" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Пароль</label>
+                        <input type="password" id="login-password" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn-primary w-100">Авторизоваться</button>
+                </form>
+
+                <!-- Форма Регистрации -->
+                <form id="register-form" class="auth-form hidden">
+                    <div class="input-group">
+                        <label>Игровой никнейм</label>
+                        <input type="text" id="reg-username" placeholder="Nick_Name" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Электронная почта</label>
+                        <input type="email" id="reg-email" placeholder="example@mail.com" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Придумайте пароль</label>
+                        <input type="password" id="reg-password" placeholder="Минимум 6 символов" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Секретный код доступа (Опционально)</label>
+                        <input type="text" id="reg-admin-code" placeholder="Код верификации админ-прав">
+                    </div>
+                    <button type="submit" class="btn-primary w-100">Создать игровой аккаунт</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- ================= ГЛАВНАЯ СТРАНИЦА (ПРОФИЛЬ И СКАЧИВАНИЕ) ================= -->
+        <section id="main-section" class="grid-layout hidden animate-fade-in">
+            
+            <!-- Карточка пользователя -->
+            <div class="card profile-card">
+                <div class="profile-bg-glow"></div>
+                <div class="avatar-wrapper">
+                    <img id="user-avatar" src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150" alt="Avatar">
+                    <input type="file" id="avatar-input" accept="image/*">
+                    <label for="avatar-input" class="avatar-upload-overlay">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    </label>
+                </div>
+                <h2 id="profile-name" class="username-display">Загрузка...</h2>
+                <div id="profile-badge" class="badge badge-player">Игрок</div>
+                
+                <div class="profile-meta">
+                    <div class="meta-item">
+                        <span class="meta-label">Статус аккаунта</span>
+                        <span class="meta-value active-status">Активен</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Синхронизация</span>
+                        <span class="meta-value">Firebase Cloud</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Зона загрузки лаунчера -->
+            <div class="card download-card">
+                <div class="download-content">
+                    <span class="card-tag">Игровой клиент</span>
+                    <h2>Установка лаунчера NOVUS RP</h2>
+                    <p>Наш технологичный лаунчер автоматически установит все необходимые файлы, текстуры, кастомные автомобили и обеспечит максимальный FPS на серверах. Нажмите на кнопку ниже, выберите желаемую папку/диск на компьютере для сохранения установщика.</p>
+                    
+                    <div class="launcher-features">
+                        <div class="feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff3344" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Авто-обновление модов</div>
+                        <div class="feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff3344" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Защита от читеров (Anti-Cheat)</div>
+                        <div class="feature"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff3344" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Быстрое подключение</div>
+                    </div>
+
+                    <!-- Ссылка на скачивание (папка launcher-dist) -->
+                    <a href="launcher-dist/launcher_installer.exe" download="launcher_installer.exe" class="btn-download animate-pulse" id="link-download">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Установить Лаунчер (.exe)
+                    </a>
+                </div>
+                <div class="download-visual">
+                    <div class="visual-sphere"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= СЕКЦИЯ ФОРУМА ================= -->
+        <section id="forum-section" class="hidden animate-fade-in">
+            <div class="forum-header-block card">
+                <div>
+                    <h2>Единый Центр Обращений Форума</h2>
+                    <p>Администраторы формируют официальные разделы. Обычные игроки могут создавать в них приватные или публичные жалобы и тикеты.</p>
+                </div>
+                <!-- Зона создания разделов (Видна только Администраторам) -->
+                <div id="admin-category-zone" class="hidden">
+                    <div class="admin-input-row">
+                        <input type="text" id="new-category-title" placeholder="Название новой вкладки форума...">
+                        <button id="btn-create-category" class="btn-primary">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Создать раздел
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="forum-grid">
+                <!-- Левый сайдбар: Вкладки разделов -->
+                <div class="card forum-sidebar">
+                    <h3>Разделы Форума</h3>
+                    <div class="categories-nav-list" id="categories-list">
+                        <!-- Динамическая подгрузка -->
+                        <div class="loading-placeholder">Загрузка категорий...</div>
+                    </div>
+                </div>
+
+                <!-- Правая часть: Список тем/жалоб -->
+                <div class="card forum-main-zone">
+                    <div class="forum-zone-header">
+                        <h3 id="current-category-title">Выберите нужный раздел слева</h3>
+                        <!-- Кнопка создания темы доступна только игрокам (Админы модерируют) -->
+                        <button id="player-thread-trigger" class="btn-accent hidden">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                            Подать жалобу / Создать тему
+                        </button>
+                    </div>
+
+                    <div id="threads-list" class="threads-container">
+                        <div class="forum-empty-state">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                            <p>Выберите интересующий информационный раздел для просмотра поданных заявлений и жалоб.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= АДМИН-ПАНЕЛЬ (FLORALMEMESENSE) ================= -->
+        <section id="admin-section" class="hidden animate-fade-in">
+            <div class="card admin-dashboard">
+                <div class="admin-db-header">
+                    <div>
+                        <h2>Панель Управления <span class="floral-text">FloralMemesense</span></h2>
+                        <p>Контроль учетных записей, распределение ролей пользователей и глобальный аудит базы данных проекта.</p>
+                    </div>
+                    <div class="system-badge">Secure Sync Active</div>
+                </div>
+
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Пользователь</th>
+                                <th>Email Адрес</th>
+                                <th>Текущий ранг</th>
+                                <th>Идентификатор (UID)</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-users-table">
+                            <!-- Подгрузка из Firebase Firestore -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Подключение главного интерактивного модуля -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
