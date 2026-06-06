@@ -2,7 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// Конфигурационные данные Firebase от клиента
+// Твой проверенный конфиг Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyCDdPwaB8mH9TsM5hyXFbF0fNpFaWXjmV0",
   authDomain: "novus-roleplay.firebaseapp.com",
@@ -12,15 +12,20 @@ const firebaseConfig = {
   appId: "1:207082104048:web:bbf438aba78c9a7e79ce35",
   measurementId: "G-V0LK42BXRT"
 };
-// Инициализация сервисов
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+
+// Инициализация сервисов с проверкой связи
+let app, auth, db;
+try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+} catch (configError) {
+    alert("Критическая ошибка конфигурации Firebase! Проверь интернеты или ключи доступа: " + configError.message);
+}
 
 let userData = null;
 let activeCategoryId = null;
 
-// Элементы навигации и структуры
 const sections = {
     main: document.getElementById('main-section'),
     forum: document.getElementById('forum-section'),
@@ -36,9 +41,14 @@ const navLinks = {
 
 const btnLogout = document.getElementById('btn-logout');
 
-// Вспомогательная система красивых уведомлений (Toast)
+// Улучшенная система уведомлений (Тосты)
 function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
+    if (!container) {
+        // Если контейнер еще не прогрузился, используем обычный алерт, чтоб не терять инфу
+        alert(`${type.toUpperCase()}: ${message}`);
+        return;
+    }
     const toast = document.createElement('div');
     toast.className = 'toast';
     if(type === 'error') toast.style.borderLeftColor = '#ff3344';
@@ -49,44 +59,51 @@ function showToast(message, type = 'success') {
         toast.style.transform = 'translateX(120%)';
         toast.style.transition = '0.3s ease';
         setTimeout(() => toast.remove(), 300);
-    }, 4000);
+    }, 5000);
 }
 
-// Роутинг разделов интерфейса
 function routeTo(targetSection) {
-    Object.keys(sections).forEach(key => sections[key].classList.add('hidden'));
-    Object.keys(navLinks).forEach(key => navLinks[key].classList.remove('active'));
+    Object.keys(sections).forEach(key => {
+        if(sections[key]) sections[key].classList.add('hidden');
+    });
+    Object.keys(navLinks).forEach(key => {
+        if(navLinks[key]) navLinks[key].classList.remove('active');
+    });
 
-    if (!auth.currentUser) {
-        sections.auth.classList.remove('hidden');
+    if (!auth || !auth.currentUser) {
+        if(sections.auth) sections.auth.classList.remove('hidden');
         return;
     }
 
-    sections[targetSection].classList.remove('hidden');
+    if(sections[targetSection]) sections[targetSection].classList.remove('hidden');
     if (navLinks[targetSection]) navLinks[targetSection].classList.add('active');
 }
 
-// Слушатели кликов меню
-navLinks.main.addEventListener('click', () => routeTo('main'));
-navLinks.forum.addEventListener('click', () => { routeTo('forum'); renderCategories(); });
-navLinks.admin.addEventListener('click', () => { routeTo('admin'); renderAdminDashboard(); });
+// Навигация
+if(navLinks.main) navLinks.main.addEventListener('click', () => routeTo('main'));
+if(navLinks.forum) navLinks.forum.addEventListener('click', () => { routeTo('forum'); renderCategories(); });
+if(navLinks.admin) navLinks.admin.addEventListener('click', () => { routeTo('admin'); renderAdminDashboard(); });
 
 // Переключение табов Вход / Регистрация
-document.getElementById('tab-login').addEventListener('click', (e) => {
-    document.getElementById('login-form').classList.remove('hidden');
-    document.getElementById('register-form').classList.add('hidden');
-    e.target.classList.add('active');
-    document.getElementById('tab-register').classList.remove('active');
-});
+const tabLogin = document.getElementById('tab-login');
+const tabRegister = document.getElementById('tab-register');
+if(tabLogin && tabRegister) {
+    tabLogin.addEventListener('click', (e) => {
+        document.getElementById('login-form').classList.remove('hidden');
+        document.getElementById('register-form').classList.add('hidden');
+        e.target.classList.add('active');
+        tabRegister.classList.remove('active');
+    });
 
-document.getElementById('tab-register').addEventListener('click', (e) => {
-    document.getElementById('register-form').classList.remove('hidden');
-    document.getElementById('login-form').classList.add('hidden');
-    e.target.classList.add('active');
-    document.getElementById('tab-login').classList.remove('active');
-});
+    tabRegister.addEventListener('click', (e) => {
+        document.getElementById('register-form').classList.remove('hidden');
+        document.getElementById('login-form').classList.add('hidden');
+        e.target.classList.add('active');
+        tabLogin.classList.remove('active');
+    });
+}
 
-// РЕГИСТРАЦИЯ ПОЛЬЗОВАТЕЛЯ
+// РЕГИСТРАЦИЯ С РАСШИФРОВКОЙ ОШИБОК
 document.getElementById('register-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = document.getElementById('reg-username').value.trim();
@@ -95,31 +112,48 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     const adminCode = document.getElementById('reg-admin-code').value.trim();
 
     let assignedRole = "Игрок";
-    // Проверка секретного кодового слова из ТЗ
     if (adminCode === "FloralMemesense") {
         assignedRole = "Администратор";
     }
 
     try {
+        // Шаг 1: Создание учетки в Authentication
         const credentials = await createUserWithEmailAndPassword(auth, email, password);
         const user = credentials.user;
 
-        await setDoc(doc(db, "users", user.uid), {
-            uid: user.uid,
-            username: username,
-            email: email,
-            role: assignedRole,
-            avatar: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150"
-        });
+        // Шаг 2: Запись профиля в базу данных Firestore
+        try {
+            await setDoc(doc(db, "users", user.uid), {
+                uid: user.uid,
+                username: username,
+                email: email,
+                role: assignedRole,
+                avatar: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150"
+            });
+            showToast(`Аккаунт успешно создан! Роль: ${assignedRole}`);
+            setTimeout(() => location.reload(), 1000);
+        } catch (firestoreError) {
+            console.error(firestoreError);
+            showToast("Аккаунт создан в Auth, но БД Firestore заблокировала запись профиля! Проверь вкладку Rules (Правила) в Firestore.", "error");
+        }
 
-        showToast(`Аккаунт успешно создан! Права: ${assignedRole}`);
-        setTimeout(() => location.reload(), 1000);
     } catch (err) {
-        showToast(err.message, 'error');
+        console.error(err);
+        if (err.code === 'auth/email-already-in-use') {
+            showToast("Этот Email уже занят другим игроком!", "error");
+        } else if (err.code === 'auth/weak-password') {
+            showToast("Слишком простой пароль! Сделай минимум 6 символов.", "error");
+        } else if (err.code === 'auth/invalid-email') {
+            showToast("Неверный формат Email адреса.", "error");
+        } else if (err.code === 'auth/operation-not-allowed') {
+            showToast("Авторизация по Email/Паролю ОТКЛЮЧЕНА в твоей панели Firebase Console!", "error");
+        } else {
+            showToast(`Ошибка Firebase Auth: ${err.message}`, "error");
+        }
     }
 });
 
-// ВХОД В СИСТЕМУ
+// ВХОД В СИСТЕМУ С РАСШИФРОВКОЙ ОШИБОК
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('login-email').value.trim();
@@ -127,103 +161,123 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 
     try {
         await signInWithEmailAndPassword(auth, email, password);
-        showToast("Авторизация прошла успешно.");
+        showToast("Авторизация прошла успешно!");
     } catch (err) {
-        showToast("Ошибка авторизации: " + err.message, 'error');
+        console.error(err);
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+            showToast("Неверный Email или Пароль!", "error");
+        } else {
+            showToast(`Ошибка входа: ${err.message}`, "error");
+        }
     }
 });
 
 // РАЗЛОГИН
-btnLogout.addEventListener('click', () => {
-    signOut(auth).then(() => {
-        showToast("Вы вышли из системы.");
-        setTimeout(() => location.reload(), 500);
+if(btnLogout) {
+    btnLogout.addEventListener('click', () => {
+        signOut(auth).then(() => {
+            showToast("Вы вышли из системы.");
+            setTimeout(() => location.reload(), 500);
+        });
     });
-});
+}
 
-// КЛИЕНТСКИЙ НАБЛЮДАТЕЛЬ ЗА СТАТУСОМ АВТОРИЗАЦИИ
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-            userData = userDoc.data();
-            
-            // Заполнение профиля на главной
-            document.getElementById('profile-name').innerText = userData.username;
-            document.getElementById('user-avatar').src = userData.avatar;
-            
-            const badge = document.getElementById('profile-badge');
-            badge.innerText = userData.role;
-            if (userData.role === "Администратор") {
-                badge.className = "badge badge-admin";
-                navLinks.admin.classList.remove('hidden');
-                document.getElementById('admin-category-zone').classList.remove('hidden');
-                document.getElementById('player-thread-trigger').classList.add('hidden'); // Админы не пишут жалобы сами себе
-            } else {
-                badge.className = "badge badge-player";
-                navLinks.admin.classList.add('hidden');
-                document.getElementById('admin-category-zone').classList.add('hidden');
-                document.getElementById('player-thread-trigger').classList.remove('hidden'); // Игроки могут создавать темы
+// НАБЛЮДАТЕЛЬ ЗА СТАТУСОМ
+if(auth) {
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            try {
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists()) {
+                    userData = userDoc.data();
+                    
+                    document.getElementById('profile-name').innerText = userData.username;
+                    document.getElementById('user-avatar').src = userData.avatar;
+                    
+                    const badge = document.getElementById('profile-badge');
+                    badge.innerText = userData.role;
+                    if (userData.role === "Администратор") {
+                        badge.className = "badge badge-admin";
+                        if(navLinks.admin) navLinks.admin.classList.remove('hidden');
+                        document.getElementById('admin-category-zone').classList.remove('hidden');
+                        document.getElementById('player-thread-trigger').classList.add('hidden');
+                    } else {
+                        badge.className = "badge badge-player";
+                        if(navLinks.admin) navLinks.admin.classList.add('hidden');
+                        document.getElementById('admin-category-zone').classList.add('hidden');
+                        document.getElementById('player-thread-trigger').classList.remove('hidden');
+                    }
+
+                    if(btnLogout) btnLogout.classList.remove('hidden');
+                    routeTo('main');
+                } else {
+                    showToast("Профиль авторизован, но данные игрока в Firestore не найдены.", "info");
+                }
+            } catch(e) {
+                showToast("Ошибка чтения профиля из Firestore: " + e.message, "error");
             }
-
-            btnLogout.classList.remove('hidden');
-            routeTo('main');
+        } else {
+            if(btnLogout) btnLogout.classList.add('hidden');
+            if(navLinks.admin) navLinks.admin.classList.add('hidden');
+            routeTo('auth');
         }
-    } else {
-        btnLogout.classList.add('hidden');
-        navLinks.admin.classList.add('hidden');
-        routeTo('auth');
-    }
-});
+    });
+}
 
-// ОБНОВЛЕНИЕ АВАТАРА (Кодирование в Base64 для моментальной записи в Firestore без настройки Storage правил)
-document.getElementById('avatar-input').addEventListener('change', function() {
-    const file = this.files[0];
-    if (file) {
-        if(file.size > 1048576) { // Ограничение на размер Base64 строки в доке Firestore (~1MB)
-            showToast("Файл слишком большой! Выберите аватарку до 1 МБ.", "error");
-            return;
+// СМЕНА АВАТАРА
+const avatarInput = document.getElementById('avatar-input');
+if(avatarInput) {
+    avatarInput.addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+            if(file.size > 1048576) {
+                showToast("Файл слишком тяжелый! Нужна картинка до 1 МБ.", "error");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = async function() {
+                const base64Str = reader.result;
+                document.getElementById('user-avatar').src = base64Str;
+                try {
+                    await updateDoc(doc(db, "users", auth.currentUser.uid), { avatar: base64Str });
+                    showToast("Аватар успешно изменен!");
+                } catch(e) {
+                    showToast("База данных отклонила сохранение аватара: " + e.message, "error");
+                }
+            }
+            reader.readAsDataURL(file);
         }
-        const reader = new FileReader();
-        reader.onloadend = async function() {
-            const base64Str = reader.result;
-            document.getElementById('user-avatar').src = base64Str;
-            
-            await updateDoc(doc(db, "users", auth.currentUser.uid), { avatar: base64Str });
-            showToast("Ваш аватар успешно обновлен и синхронизирован!");
+    });
+}
+
+// ================= ФОРУМ =================
+const btnCreateCategory = document.getElementById('btn-create-category');
+if(btnCreateCategory) {
+    btnCreateCategory.addEventListener('click', async () => {
+        const title = document.getElementById('new-category-title').value.trim();
+        if (!title) return showToast("Укажите название раздела!", "error");
+
+        try {
+            await addDoc(collection(db, "categories"), { title: title, createdAt: Date.now() });
+            document.getElementById('new-category-title').value = "";
+            showToast("Новый раздел форума успешно создан!");
+            renderCategories();
+        } catch(err) {
+            showToast("Не удалось создать раздел: " + err.message, "error");
         }
-        reader.readAsDataURL(file);
-    }
-});
+    });
+}
 
-// ================= ИНТЕРФЕЙС И СТРУКТУРА ФОРУМА =================
-
-// Создание нового раздела (Только для Администраторов)
-document.getElementById('btn-create-category').addEventListener('click', async () => {
-    const title = document.getElementById('new-category-title').value.trim();
-    if (!title) return showToast("Укажите корректное название раздела!", "error");
-    if (userData.role !== "Администратор") return showToast("Доступ запрещен!", "error");
-
-    try {
-        await addDoc(collection(db, "categories"), { title: title, createdAt: Date.now() });
-        document.getElementById('new-category-title').value = "";
-        showToast("Новая вкладка успешно добавлена на форум!");
-        renderCategories();
-    } catch(err) {
-        showToast(err.message, "error");
-    }
-});
-
-// Рендеринг списка вкладок слева
 async function renderCategories() {
     const listContainer = document.getElementById('categories-list');
-    listContainer.innerHTML = '<div style="color:var(--text-muted); font-size:14px;">Загрузка категорий...</div>';
+    if(!listContainer) return;
+    listContainer.innerHTML = '<div style="color:var(--text-muted); font-size:14px;">Синхронизация...</div>';
     
     try {
         const snap = await getDocs(collection(db, "categories"));
         listContainer.innerHTML = "";
         if(snap.empty) {
-            listContainer.innerHTML = '<div style="color:var(--text-muted); font-size:13px;">Вкладок пока нет.</div>';
+            listContainer.innerHTML = '<div style="color:var(--text-muted); font-size:13px;">Разделов пока нет.</div>';
             return;
         }
         snap.forEach(docSnap => {
@@ -235,67 +289,70 @@ async function renderCategories() {
             listContainer.appendChild(btn);
         });
     } catch(err) {
-        listContainer.innerHTML = "Ошибка получения данных.";
+        listContainer.innerHTML = "Ошибка чтения категорий: " + err.message;
     }
 }
 
-// Клик по вкладке форума
 function selectCategory(id, title, element) {
     activeCategoryId = id;
     document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
     element.classList.add('active');
-    
     document.getElementById('current-category-title').innerText = title;
     
-    // Ограничение интерфейса: Админы создают разделы, а пишут туда только обычные Игроки
     if (userData && userData.role === "Администратор") {
         document.getElementById('player-thread-trigger').classList.add('hidden');
     } else {
         document.getElementById('player-thread-trigger').classList.remove('hidden');
     }
-
     renderThreads(id);
 }
 
-// Логика работы модального окна создания жалобы
 const modalOverlay = document.getElementById('modal-overlay');
-document.getElementById('player-thread-trigger').addEventListener('click', () => {
-    if(!activeCategoryId) return showToast("Сначала выберите категорию форума!", "info");
-    modalOverlay.classList.remove('hidden');
-});
-document.getElementById('btn-close-modal').addEventListener('click', () => modalOverlay.classList.add('hidden'));
+const playerThreadTrigger = document.getElementById('player-thread-trigger');
+if(playerThreadTrigger) {
+    playerThreadTrigger.addEventListener('click', () => {
+        if(!activeCategoryId) return showToast("Сначала выберите категорию форума справа!", "info");
+        if(modalOverlay) modalOverlay.classList.remove('hidden');
+    });
+}
+const btnCloseModal = document.getElementById('btn-close-modal');
+if(btnCloseModal && modalOverlay) {
+    btnCloseModal.addEventListener('click', () => modalOverlay.classList.add('hidden'));
+}
 
-// Публикация жалобы/темы игроком
-document.getElementById('btn-submit-thread').addEventListener('click', async () => {
-    const title = document.getElementById('thread-title').value.trim();
-    const text = document.getElementById('thread-text').value.trim();
+const btnSubmitThread = document.getElementById('btn-submit-thread');
+if(btnSubmitThread) {
+    btnSubmitThread.addEventListener('click', async () => {
+        const title = document.getElementById('thread-title').value.trim();
+        const text = document.getElementById('thread-text').value.trim();
 
-    if(!title || !text) return showToast("Заполните все текстовые поля заявления!", "error");
+        if(!title || !text) return showToast("Заполните все поля жалобы!", "error");
 
-    try {
-        await addDoc(collection(db, "threads"), {
-            categoryId: activeCategoryId,
-            title: title,
-            text: text,
-            authorName: userData.username,
-            authorAvatar: userData.avatar,
-            timestamp: new Date().toLocaleString("ru-RU")
-        });
+        try {
+            await addDoc(collection(db, "threads"), {
+                categoryId: activeCategoryId,
+                title: title,
+                text: text,
+                authorName: userData.username,
+                authorAvatar: userData.avatar,
+                timestamp: new Date().toLocaleString("ru-RU")
+            });
 
-        document.getElementById('thread-title').value = "";
-        document.getElementById('thread-text').value = "";
-        modalOverlay.classList.add('hidden');
-        showToast("Ваше обращение успешно опубликовано!");
-        renderThreads(activeCategoryId);
-    } catch(err) {
-        showToast(err.message, "error");
-    }
-});
+            document.getElementById('thread-title').value = "";
+            document.getElementById('thread-text').value = "";
+            if(modalOverlay) modalOverlay.classList.add('hidden');
+            showToast("Обращение успешно отправлено!");
+            renderThreads(activeCategoryId);
+        } catch(err) {
+            showToast("Ошибка отправки темы: " + err.message, "error");
+        }
+    });
+}
 
-// Загрузка топиков внутри выбранного раздела
 async function renderThreads(catId) {
     const container = document.getElementById('threads-list');
-    container.innerHTML = '<div style="color:var(--text-muted); padding: 20px 0; font-size:14px;">Синхронизация топиков...</div>';
+    if(!container) return;
+    container.innerHTML = '<div style="color:var(--text-muted); padding: 20px 0; font-size:14px;">Загрузка топиков...</div>';
 
     try {
         const q = query(collection(db, "threads"), where("categoryId", "==", catId));
@@ -305,7 +362,7 @@ async function renderThreads(catId) {
         if(snap.empty) {
             container.innerHTML = `
                 <div class="forum-empty-state">
-                    <p>В этом разделе еще не создано ни одного обращения. Ваша жалоба может стать первой.</p>
+                    <p>В этом разделе еще не создано ни одного обращения.</p>
                 </div>`;
             return;
         }
@@ -326,15 +383,16 @@ async function renderThreads(catId) {
             container.appendChild(card);
         });
     } catch (err) {
-        container.innerHTML = "Ошибка подгрузки базы данных.";
+        container.innerHTML = "Ошибка базы данных форума: " + err.message;
     }
 }
 
-// ================= УПРАВЛЕНИЕ АДМИН-ПАНЕЛИ =================
+// ================= АДМИНКА =================
 async function renderAdminDashboard() {
-    if(userData.role !== "Администратор") return;
+    if(!userData || userData.role !== "Администратор") return;
     const tableBody = document.getElementById('admin-users-table');
-    tableBody.innerHTML = '<tr><td colspan="5" style="color:var(--text-muted); text-align:center;">Загрузка реестра игроков...</td></tr>';
+    if(!tableBody) return;
+    tableBody.innerHTML = '<tr><td colspan="5" style="color:var(--text-muted); text-align:center;">Загрузка списка...</td></tr>';
 
     try {
         const snap = await getDocs(collection(db, "users"));
@@ -343,7 +401,6 @@ async function renderAdminDashboard() {
         snap.forEach(docSnap => {
             const userItem = docSnap.data();
             const tr = document.createElement('tr');
-            
             const isSelfAdmin = userItem.uid === auth.currentUser.uid;
             
             tr.innerHTML = `
@@ -358,17 +415,19 @@ async function renderAdminDashboard() {
                 <td class="uid-text">${userItem.uid}</td>
                 <td>
                     ${isSelfAdmin ? '<span style="color:var(--text-muted); font-size:12px; font-style:italic;">Вы (Владелец)</span>' : 
-                    `<button class="btn-secondary" style="padding: 6px 12px; font-size:12px; border-color:rgba(255,51,68,0.3); color:var(--accent-red);" onclick="alert('Действие выполнено! Пользователь заблокирован в системе управления FloralMemesense.')">Забанить</button>`}
+                    `<button class="btn-secondary" style="padding: 6px 12px; font-size:12px; border-color:rgba(255,51,68,0.3); color:var(--accent-red);" onclick="alert('Игрок заблокирован!')">Забанить</button>`}
                 </td>
             `;
             tableBody.appendChild(tr);
         });
     } catch(err) {
-        tableBody.innerHTML = '<tr><td colspan="5" style="color:var(--accent-red); text-align:center;">Ошибка доступа к Firestore Collections.</td></tr>';
+        tableBody.innerHTML = `<tr><td colspan="5" style="color:var(--accent-red); text-align:center;">Ошибка Firestore: ${err.message}</td></tr>`;
     }
 }
 
-// Симуляция клика при сохранении файла (визуальный фидбек для пользователя)
-document.getElementById('link-download').addEventListener('click', () => {
-    showToast("Подготовка пакетов установщика... Браузер запросит выбор папки назначения.", "info");
-});
+const linkDownload = document.getElementById('link-download');
+if(linkDownload) {
+    linkDownload.addEventListener('click', () => {
+        showToast("Началось скачивание лаунчера! Выберите место сохранения.", "info");
+    });
+}
